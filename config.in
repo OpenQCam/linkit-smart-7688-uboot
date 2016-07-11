@@ -872,7 +872,8 @@ choice 'Flash Type' "NAND ON_BOARD_NAND_FLASH_COMPONENT \
 if [ "$DUAL_IMAGE_SUPPORT" = "y" ]; then
 choice 'Flash Size' "4M ON_BOARD_4M_FLASH_COMPONENT \
                      8M ON_BOARD_8M_FLASH_COMPONENT \
-                     16M ON_BOARD_16M_FLASH_COMPONENT 
+                     16M ON_BOARD_16M_FLASH_COMPONENT \
+                     32M ON_BOARD_32M_FLASH_COMPONENT
 		    " 4M
 fi
 #-----------------------
@@ -1429,7 +1430,8 @@ define_bool ON_BOARD_SPI_FLASH_COMPONENT y
 if [ "$DUAL_IMAGE_SUPPORT" = "y" ]; then
 choice 'Flash Size' "4M ON_BOARD_4M_FLASH_COMPONENT \
                      8M ON_BOARD_8M_FLASH_COMPONENT \
-                     16M ON_BOARD_16M_FLASH_COMPONENT
+                     16M ON_BOARD_16M_FLASH_COMPONENT \
+                     32M ON_BOARD_32M_FLASH_COMPONENT
                     " 4M
 fi
 #-----------------------
