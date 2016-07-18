@@ -1140,7 +1140,8 @@ int check_image_validation(void)
 	unsigned long len = 0, chksum = 0;
 	image_header_t hdr1, hdr2;
 	unsigned char *hdr1_addr, *hdr2_addr;
-	char *stable, *try;
+	char *boot, *stable, *try;
+	int bootpart;
 	
 	hdr1_addr = (unsigned char *)CFG_KERN_ADDR;
 	hdr2_addr = (unsigned char *)CFG_KERN2_ADDR;
@@ -1156,7 +1157,24 @@ int check_image_validation(void)
 	memmove(&hdr2, (char *)hdr2_addr, sizeof(image_header_t));
 #endif
 
+	boot = getenv("boot");
+	if (boot == NULL) {
+		printf("Not found boot env, ");
+		bootpart = 1;
+		setenv("boot", "1");
+		saveenv();
+	} else {
+		if (strcmp(boot, "1") && strcmp(boot, "2")) {
+			printf("boot != 1 or 2, ");
+			setenv("boot", "1");
+			saveenv();
+		} else {
+			bootpart = simple_strtoul(boot, NULL, 10);
+		}
+	}
+
 	printf("\n=================================================\n");
+	printf("boot:image%d\n", bootpart);
 	printf("Check image validation:\n");
 
 	/* Check header magic number */
@@ -1990,6 +2008,7 @@ __attribute__((nomips16)) void board_init_r (gd_t *id, ulong dest_addr)
 	    s = getenv ("bootdelay");
 	    timer1 = s ? (int)simple_strtol(s, NULL, 10) : CONFIG_BOOTDELAY;
 	}
+/* Raylin Mask
 	u32 g;
 
 	// BOOTSTRAP
@@ -2070,7 +2089,7 @@ __attribute__((nomips16)) void board_init_r (gd_t *id, ulong dest_addr)
 	}
 
 	RALINK_REG(RALINK_PIO_BASE+PIO_SET1) |= (1 << 12);
-
+*/
 	OperationSelect();
 	while (timer1 > 0) {
 		--timer1;
@@ -2089,7 +2108,7 @@ __attribute__((nomips16)) void board_init_r (gd_t *id, ulong dest_addr)
 		printf ("\b\b\b%2d ", timer1);
 	}
 	putc ('\n');
-
+/* Raylin mask
 	// Roger debug
 	if (0) {
 		int i;
@@ -2104,12 +2123,16 @@ __attribute__((nomips16)) void board_init_r (gd_t *id, ulong dest_addr)
 		reg = *(volatile u_long *)(RALINK_SYSCTL_BASE + 0x60);
 		printf("GPIO = %x\n", reg);
 	}
-
-
-
+*/
 	if(BootType == '3') {
 		char *argv[2];
+
+#ifdef DUAL_IMAGE_SUPPORT
+		s = getenv("boot");
+		sprintf(addr_str, "0x%X", ((s != NULL && !strcmp(s,"1")) ? CFG_KERN_ADDR: CFG_KERN2_ADDR));
+#else
 		sprintf(addr_str, "0x%X", CFG_KERN_ADDR);
+#endif
 		argv[1] = &addr_str[0];
 		printf("   \n3: System Boot system code via Flash.\n");
 		do_bootm(cmdtp, 0, 2, argv);
@@ -2166,7 +2189,19 @@ __attribute__((nomips16)) void board_init_r (gd_t *id, ulong dest_addr)
 #elif defined (CFG_ENV_IS_IN_SPI)
 			if (1) {
 				unsigned int load_address = simple_strtoul(argv[1], NULL, 16);
+#ifdef DUAL_IMAGE_SUPPORT
+				s = getenv("boot");
+				if (s != NULL && !strcmp(s,"1")) {
+					raspi_erase_write((u8 *)load_address, CFG_KERN2_ADDR - CFG_FLASH_BASE, NetBootFileXferSize);
+					setenv("boot", "2");
+				} else {
 				raspi_erase_write((u8 *)load_address, CFG_KERN_ADDR-CFG_FLASH_BASE, NetBootFileXferSize);
+					setenv("boot", "1");
+				}
+				saveenv();
+#else
+				raspi_erase_write((u8 *)load_address, CFG_KERN_ADDR - CFG_FLASH_BASE, NetBootFileXferSize);
+#endif
 			}
 #else //CFG_ENV_IS_IN_FLASH
 #if (defined (ON_BOARD_8M_FLASH_COMPONENT) || defined (ON_BOARD_16M_FLASH_COMPONENT)) && (defined (RT2880_ASIC_BOARD) || defined (RT2880_FPGA_BOARD) || defined (RT3052_MP1))
