@@ -256,7 +256,7 @@ extern unsigned int  CFG_BLOCKSIZE;
 		#elif defined (ON_BOARD_16M_FLASH_COMPONENT)
 			#define PHYS_FLASH2_1		0xBC800000 /* Flash Bank #2 */
 		#elif defined (ON_BOARD_32M_FLASH_COMPONENT)
-  #define PHYS_FLASH2_1		0xBC800000 /* Flash Bank #2 */
+  			#define PHYS_FLASH2_1		0xBC7D0000 /* Flash Bank #2 */
 		#endif
 	#endif // DUAL_IMAGE_SUPPORT
 #elif  defined (MT7621_FPGA_BOARD) || defined (MT7621_ASIC_BOARD)
@@ -318,9 +318,9 @@ extern unsigned int  CFG_BLOCKSIZE;
 
 
 #if defined (ON_BOARD_32M_FLASH_COMPONENT) && !defined (DUAL_IMAGE_SUPPORT)
-	#define CFG_BOOTLOADER_SIZE	0x40000
-	#define CFG_CONFIG_SIZE		0x20000
-	#define CFG_FACTORY_SIZE	0x20000
+	#define CFG_BOOTLOADER_SIZE	0x30000
+	#define CFG_CONFIG_SIZE		0x10000
+	#define CFG_FACTORY_SIZE	0x10000
 	#define CFG_ENV_ADDR		(PHYS_FLASH_2 + 0x1000000 - CFG_BOOTLOADER_SIZE)
 	#define CFG_FACTORY_ADDR	(PHYS_FLASH_2 + 0x1000000 - CFG_FACTORY_SIZE)
 	#define CFG_KERN_ADDR		(CFG_FLASH_BASE + CFG_BOOTLOADER_SIZE)
@@ -336,9 +336,9 @@ extern unsigned int  CFG_BLOCKSIZE;
 			#define CFG_CONFIG_SIZE		(CFG_BLOCKSIZE<<2)
 			#define CFG_FACTORY_SIZE	(CFG_BLOCKSIZE<<1)
 		#else
-			#define CFG_BOOTLOADER_SIZE	0x40000
-			#define CFG_CONFIG_SIZE		0x20000
-			#define CFG_FACTORY_SIZE	0x20000
+			#define CFG_BOOTLOADER_SIZE	0x30000
+			#define CFG_CONFIG_SIZE		0x10000
+			#define CFG_FACTORY_SIZE	0x10000
 		#endif
 	#endif
 
