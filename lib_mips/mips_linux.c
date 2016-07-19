@@ -27,6 +27,7 @@
 #include <zlib.h>
 #include <asm/byteorder.h>
 #include <asm/addrspace.h>
+#include <version.h>
 
 #define	LINUX_MAX_ENVS		256
 #define	LINUX_MAX_ARGS		256
@@ -63,7 +64,6 @@ void do_bootm_linux (cmd_tbl_t * cmdtp, int flag, int argc, char *argv[],
 	ulong data;
 	void (*theKernel) (int, char **, char **, int *);
 	image_header_t *hdr = &header;
-	char *commandline = getenv ("bootargs");
 	char env_buf[12];
 	int i;
 
@@ -183,6 +183,13 @@ void do_bootm_linux (cmd_tbl_t * cmdtp, int flag, int argc, char *argv[],
 		(ulong) theKernel);
 #endif
 
+	char *bootargs = getenv ("bootargs");
+	char commandline[256];
+	if (bootargs == NULL) {
+			sprintf(commandline, "uboot=%s", U_BOOT_VERSION);
+	} else {
+			sprintf(commandline, "uboot=%s %s", U_BOOT_VERSION, bootargs);
+	}
 	linux_params_init (UNCACHED_SDRAM (gd->bd->bi_boot_params), commandline);
 
 #ifdef CONFIG_MEMSIZE_IN_BYTES
