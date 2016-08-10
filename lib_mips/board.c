@@ -607,6 +607,18 @@ init_fnc_t *init_sequence[] = {
 };
 #endif
 
+#define GPIOMODE	0x60
+#define GPIOMODE2	0x64
+
+#define PIO_DIR0	0x00
+#define PIO_DIR1	0x04
+#define PIO_DATA0	0x20
+#define PIO_DATA1	0x24
+#define PIO_SET0	0x30
+#define PIO_SET1	0x34
+#define PIO_CLEAR0	0x40
+#define PIO_CLEAR1	0x44
+
 
 __attribute__((nomips16))	void	board_init_f( ulong bootflag )
 {
@@ -877,6 +889,24 @@ __attribute__((nomips16))	void	board_init_f( ulong bootflag )
 	copy_code( addr );
 #endif
 
+// Raylin
+	debug("[XLiveCam] Pull High GPIO0 to Enable Default LED \n");
+/* Raylin temporally mask
+	// WIFI LED
+	// set GPIO44 to normal gpio
+	RALINK_REG(RALINK_SYSCTL_BASE+GPIOMODE2) |= 0x1;
+	// set GPIO44 to output
+	RALINK_REG(RALINK_PIO_BASE+PIO_DIR1) |= (1 << 12);
+	// set /GPIO44
+	RALINK_REG(RALINK_PIO_BASE+PIO_SET1) |= (1 << 12);
+*/
+	// Power LED. Initial on
+	// set GPIO0 to normal gpio
+	RALINK_REG(RALINK_SYSCTL_BASE+GPIOMODE) |= (0x1 << 6);
+	// set GPIO0 to output
+	RALINK_REG(RALINK_PIO_BASE+PIO_DIR0) |= 0x1;
+	// set GPIO0
+	RALINK_REG(RALINK_PIO_BASE+PIO_SET0) |= 0x1;
 
 #if defined(CFG_RUN_CODE_IN_RAM)
 	/* tricky: relocate code to original TEXT_BASE for ICE souce level debuggind mode	*/
@@ -1316,16 +1346,6 @@ int check_image_validation(void)
 	return ret;
 }
 #endif
-
-#define GPIOMODE	0x60
-#define GPIOMODE2	0x64
-
-#define PIO_DIR0	0x00
-#define PIO_DIR1	0x04
-#define PIO_DATA1	0x24
-#define PIO_SET1	0x34
-#define PIO_CLEAR0	0x40
-#define PIO_CLEAR1	0x44
 
 static int smart7688_led_state;
 
@@ -2008,6 +2028,12 @@ __attribute__((nomips16)) void board_init_r (gd_t *id, ulong dest_addr)
 	    s = getenv ("bootdelay");
 	    timer1 = s ? (int)simple_strtol(s, NULL, 10) : CONFIG_BOOTDELAY;
 	}
+	
+
+// Raylin
+	printf("\nGPIOMODE --> %x\n", RALINK_REG(RALINK_SYSCTL_BASE+GPIOMODE));
+	printf("\nGPIOMODE2 --> %x\n", RALINK_REG(RALINK_SYSCTL_BASE+GPIOMODE2));
+
 /* Raylin Mask
 	u32 g;
 
