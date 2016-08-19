@@ -890,23 +890,51 @@ __attribute__((nomips16))	void	board_init_f( ulong bootflag )
 #endif
 
 // Raylin
-	debug("[XLiveCam] Pull High GPIO0 to Enable Default LED \n");
-/* Raylin temporally mask
-	// WIFI LED
-	// set GPIO44 to normal gpio
-	RALINK_REG(RALINK_SYSCTL_BASE+GPIOMODE2) |= 0x1;
-	// set GPIO44 to output
-	RALINK_REG(RALINK_PIO_BASE+PIO_DIR1) |= (1 << 12);
-	// set /GPIO44
-	RALINK_REG(RALINK_PIO_BASE+PIO_SET1) |= (1 << 12);
-*/
+	debug("[XLiveCam] Enable Default LED and Detect Button\n");
 	// Power LED. Initial on
 	// set GPIO0 to normal gpio
 	RALINK_REG(RALINK_SYSCTL_BASE+GPIOMODE) |= (0x1 << 6);
 	// set GPIO0 to output
 	RALINK_REG(RALINK_PIO_BASE+PIO_DIR0) |= 0x1;
 	// set GPIO0
-	RALINK_REG(RALINK_PIO_BASE+PIO_SET0) |= 0x1;
+	RALINK_REG(RALINK_PIO_BASE+PIO_SET0) = 0x1;
+	
+
+// BUTTON
+	u32 g, reg;
+	// set GPIO17 (Mode) to normal gpio
+	RALINK_REG(RALINK_SYSCTL_BASE+GPIOMODE) |= (1 << 2);
+	// set GPIO17 to input
+	g = RALINK_REG(RALINK_PIO_BASE+PIO_DIR0);
+	g &= ~(1 << 17);
+	RALINK_REG(RALINK_PIO_BASE+PIO_DIR0) = g;
+	// check if GPIO17 is set
+	reg = RALINK_REG(RALINK_PIO_BASE+PIO_DATA0);
+
+	// GPIO20, GPIO21 (UART2) Set to GPIO mode
+	// GPIO1, GPIO2 (I2S) Set to GPIO mode // Already set in LED GPIO
+	RALINK_REG(RALINK_SYSCTL_BASE+GPIOMODE) |= (0x1 << 26);
+	reg &= (1 << 17);
+	if (reg) 
+	{
+		// Enable Geo. Set Geo to PC UVC mode
+		printf("\n\MODE BUTTON PRESSED. ENTER UVC MODE\n");
+		// set GPIO1, GPIO2, GPIO20 and GPIO21 set to output
+		RALINK_REG(RALINK_PIO_BASE+PIO_DIR0) |= 0x300000;
+		// set GPIO1, GPIO2 set to Low, and GPIO20 and GPIO21 set High
+		RALINK_REG(RALINK_PIO_BASE+PIO_SET0) = 0x300000;
+		RALINK_REG(RALINK_PIO_BASE+PIO_CLEAR0) = 0x6; //Clear GPIO1 and GPIO2
+
+	} else {
+		// Enable Geo. Set Geo to MT7688
+
+		printf("\n\nNO BUTTON PRESSED\n");
+
+		// set GPIO1, GPIO2, GPIO20 and GPIO21 set to output
+		RALINK_REG(RALINK_PIO_BASE+PIO_DIR0) |= 0x300006;
+		// set GPIO1, GPIO2, GPIO20 and GPIO21 set High
+		RALINK_REG(RALINK_PIO_BASE+PIO_SET0) = 0x300006;
+	}
 
 #if defined(CFG_RUN_CODE_IN_RAM)
 	/* tricky: relocate code to original TEXT_BASE for ICE souce level debuggind mode	*/
@@ -2033,6 +2061,8 @@ __attribute__((nomips16)) void board_init_r (gd_t *id, ulong dest_addr)
 // Raylin
 	printf("\nGPIOMODE --> %x\n", RALINK_REG(RALINK_SYSCTL_BASE+GPIOMODE));
 	printf("\nGPIOMODE2 --> %x\n", RALINK_REG(RALINK_SYSCTL_BASE+GPIOMODE2));
+	printf("\nDirection --> %x\n", RALINK_REG(RALINK_PIO_BASE+PIO_DIR0));
+	printf("\nValue --> %x\n", RALINK_REG(RALINK_PIO_BASE+PIO_DATA0));
 
 /* Raylin Mask
 	u32 g;
