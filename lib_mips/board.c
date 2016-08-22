@@ -909,13 +909,19 @@ __attribute__((nomips16))	void	board_init_f( ulong bootflag )
 	{
 		// Enable Geo. Set Geo to PC UVC mode
 		printf("\n\MODE BUTTON PRESSED. ENTER UVC MODE\n");
-		// BLUE LED
+		// RED + BLUE LED
 		// set GPIO44 to normal gpio
 		RALINK_REG(RALINK_SYSCTL_BASE+GPIOMODE2) |= 0x1;
 		// set GPIO44 to output
 		RALINK_REG(RALINK_PIO_BASE+PIO_DIR1) |= (1 << 12);
 		// set GPIO44
 		RALINK_REG(RALINK_PIO_BASE+PIO_SET1) |= (1 << 12);
+		// set GPIO0 to normal gpio
+		RALINK_REG(RALINK_SYSCTL_BASE+GPIOMODE) |= (0x1 << 6);
+		// set GPIO0 to output
+		RALINK_REG(RALINK_PIO_BASE+PIO_DIR0) |= 0x1;
+		// set GPIO0
+		RALINK_REG(RALINK_PIO_BASE+PIO_SET0) = 0x1;
 
 		// set GPIO20 and GPIO21 set to output. GPIO1 and GPIO1 keeps input for low output level
 		RALINK_REG(RALINK_PIO_BASE+PIO_DIR0) |= 0x300000;
