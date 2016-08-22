@@ -889,17 +889,7 @@ __attribute__((nomips16))	void	board_init_f( ulong bootflag )
 	copy_code( addr );
 #endif
 
-// Raylin
-	debug("[XLiveCam] Enable Default LED and Detect Button\n");
-	// Power LED. Initial on
-	// set GPIO0 to normal gpio
-	RALINK_REG(RALINK_SYSCTL_BASE+GPIOMODE) |= (0x1 << 6);
-	// set GPIO0 to output
-	RALINK_REG(RALINK_PIO_BASE+PIO_DIR0) |= 0x1;
-	// set GPIO0
-	RALINK_REG(RALINK_PIO_BASE+PIO_SET0) = 0x1;
-	
-
+// Raylin to enable UVC detection and LED control
 // BUTTON
 	u32 g, reg;
 	// set GPIO17 (Mode) to normal gpio
@@ -919,16 +909,29 @@ __attribute__((nomips16))	void	board_init_f( ulong bootflag )
 	{
 		// Enable Geo. Set Geo to PC UVC mode
 		printf("\n\MODE BUTTON PRESSED. ENTER UVC MODE\n");
-		// set GPIO1, GPIO2, GPIO20 and GPIO21 set to output
+		// BLUE LED
+		// set GPIO44 to normal gpio
+		RALINK_REG(RALINK_SYSCTL_BASE+GPIOMODE2) |= 0x1;
+		// set GPIO44 to output
+		RALINK_REG(RALINK_PIO_BASE+PIO_DIR1) |= (1 << 12);
+		// set GPIO44
+		RALINK_REG(RALINK_PIO_BASE+PIO_SET1) |= (1 << 12);
+
+		// set GPIO20 and GPIO21 set to output. GPIO1 and GPIO1 keeps input for low output level
 		RALINK_REG(RALINK_PIO_BASE+PIO_DIR0) |= 0x300000;
 		// set GPIO1, GPIO2 set to Low, and GPIO20 and GPIO21 set High
 		RALINK_REG(RALINK_PIO_BASE+PIO_SET0) = 0x300000;
 		RALINK_REG(RALINK_PIO_BASE+PIO_CLEAR0) = 0x6; //Clear GPIO1 and GPIO2
-
 	} else {
 		// Enable Geo. Set Geo to MT7688
-
 		printf("\n\nNO BUTTON PRESSED\n");
+		// Power LED. Initial on
+		// set GPIO0 to normal gpio
+		RALINK_REG(RALINK_SYSCTL_BASE+GPIOMODE) |= (0x1 << 6);
+		// set GPIO0 to output
+		RALINK_REG(RALINK_PIO_BASE+PIO_DIR0) |= 0x1;
+		// set GPIO0
+		RALINK_REG(RALINK_PIO_BASE+PIO_SET0) = 0x1;
 
 		// set GPIO1, GPIO2, GPIO20 and GPIO21 set to output
 		RALINK_REG(RALINK_PIO_BASE+PIO_DIR0) |= 0x300006;
@@ -1379,6 +1382,7 @@ static int smart7688_led_state;
 
 void smart7688_led_blink(void)
 {
+/*
 	if (smart7688_led_state) {
 		RALINK_REG(RALINK_PIO_BASE+PIO_SET1) |= (1 << 12);
 		smart7688_led_state = 0;
@@ -1386,6 +1390,7 @@ void smart7688_led_blink(void)
 		RALINK_REG(RALINK_PIO_BASE+PIO_CLEAR1) |= (1 << 12);
 		smart7688_led_state = 1;
 	}
+*/
 }
 
 
@@ -1478,8 +1483,10 @@ __attribute__((nomips16)) void board_init_r (gd_t *id, ulong dest_addr)
 	Init_System_Mode(); /*  Get CPU rate */
 
 #if defined(MT7628_ASIC_BOARD)	/* Enable WLED share pin */
+/* Raylin mask to use GPIO instead of WIFI LED Control
 	RALINK_REG(RALINK_SYSCTL_BASE+0x3C)|= (1<<8);	
 	RALINK_REG(RALINK_SYSCTL_BASE+0x64)&= ~((0x3<<16)|(0x3));
+*/
 #endif	
 #if defined(RT3052_ASIC_BOARD) || defined(RT3352_ASIC_BOARD) || defined(RT5350_ASIC_BOARD)
 	//turn on all Ethernet LEDs around 0.5sec.
