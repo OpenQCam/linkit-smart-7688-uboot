@@ -1097,12 +1097,67 @@ void trigger_hw_reset(void)
  * dir=1: Image1 to Image2
  * dir=2: Image2 to Image1
  */
-int copy_image(int dir, unsigned long image_size) 
+int copy_image(int dir)
 {
 	int ret = 0;
 #ifdef CFG_ENV_IS_IN_FLASH
 	unsigned long e_end, len;
 #endif
+
+	image_header_t hdr;
+	unsigned char *hdr_addr;
+
+	if (dir == 1) {
+		hdr_addr = (unsigned char *)CFG_KERN_ADDR;
+	} else {
+		hdr_addr = (unsigned char *)CFG_KERN2_ADDR;
+	}
+
+#if defined (CFG_ENV_IS_IN_NAND)
+	ranand_read((char *)&hdr, (unsigned int)hdr_addr - CFG_FLASH_BASE, sizeof(image_header_t));
+#elif defined (CFG_ENV_IS_IN_SPI)
+	raspi_read((char *)&hdr, (unsigned int)hdr_addr - CFG_FLASH_BASE, sizeof(image_header_t));
+
+#else //CFG_ENV_IS_IN_FLASH
+	memmove(&hdr, (char *)hdr_addr, sizeof(image_header_t));
+#endif
+
+	unsigned long image_size = ntohl(hdr.ih_size) + sizeof(image_header_t);
+	if (image_size > CFG_KERN_SIZE) {
+		printf("Image size(0x%X) is too big(limit=0x%X)!!\n", image_size);
+		return -1;
+	}
+
+	/* Check image Header Magic Number */
+	if (ntohl(hdr.ih_magic) != IH_MAGIC) {
+		return -1;
+	}
+	/* Check header crc */
+	unsigned long len  = sizeof(image_header_t);
+	unsigned long chksum = ntohl(hdr.ih_hcrc);
+	hdr.ih_hcrc = 0;
+	if (crc32(0, (char *)&hdr, len) != chksum) {
+		return -1;
+	}
+	/* Check data crc */
+	len = ntohl(hdr.ih_size);
+	chksum = ntohl(hdr.ih_dcrc);
+#if defined (CFG_ENV_IS_IN_NAND)
+	ranand_read((char *)CFG_SPINAND_LOAD_ADDR,
+			(unsigned int)hdr_addr - CFG_FLASH_BASE + sizeof(image_header_t),
+			len);
+	if (crc32(0, (char *)CFG_SPINAND_LOAD_ADDR, len) != chksum)
+#elif defined (CFG_ENV_IS_IN_SPI)
+	raspi_read((char *)CFG_SPINAND_LOAD_ADDR,
+			(unsigned int)hdr_addr - CFG_FLASH_BASE + sizeof(image_header_t),
+			len);
+	if (crc32(0, (char *)CFG_SPINAND_LOAD_ADDR, len) != chksum)
+#else //CFG_ENV_IS_IN_FLASH
+	if (crc32(0, (char *)(hdr_addr + sizeof(image_header_t)), len) != chksum)
+#endif
+	{
+		return -1;
+	}
 
 	if (dir == 1) {
 #if defined (CFG_ENV_IS_IN_NAND)
@@ -1360,7 +1415,7 @@ int check_image_validation(void)
 				\nGive up copying image.\n", len, CFG_KERN_SIZE);
 		else {
 			printf("Image1 is borken. Copy Image2 to Image1\n");
-			copy_image(2, len);
+			copy_image(2);
 		}
 	}
 	else if (broken1 == 0 && broken2 == 1) {
@@ -1370,7 +1425,7 @@ int check_image_validation(void)
 				\nGive up copying image.\n", len, CFG_KERN2_SIZE);
 		else {
 			printf("\nImage2 is borken. Copy Image1 to Image2.\n");
-			copy_image(1, len);
+			copy_image(1);
 		}
 	}
 	else if (broken1 == 1 && broken2 == 1)
@@ -2060,9 +2115,6 @@ __attribute__((nomips16)) void board_init_r (gd_t *id, ulong dest_addr)
 #endif
 	LANWANPartition();
 
-#ifdef DUAL_IMAGE_SUPPORT
-	check_image_validation();
-#endif
 /*config bootdelay via environment parameter: bootdelay */
 	{
 	    char * s;
@@ -2197,14 +2249,60 @@ __attribute__((nomips16)) void board_init_r (gd_t *id, ulong dest_addr)
 		char *argv[2];
 
 #ifdef DUAL_IMAGE_SUPPORT
+		/* Check boot flag */
 		s = getenv("boot");
-		sprintf(addr_str, "0x%X", ((s != NULL && !strcmp(s,"1")) ? CFG_KERN_ADDR: CFG_KERN2_ADDR));
+		if (s == NULL) {
+			setenv("boot", "1");
+			saveenv();
+			sprintf(addr_str, "0x%X", CFG_KERN_ADDR);
+		} else {
+			if (strcmp(s, "1") && strcmp(s, "2")) {
+				setenv("boot", "1");
+				saveenv();
+				sprintf(addr_str, "0x%X", CFG_KERN_ADDR);
+			} else {
+				sprintf(addr_str, "0x%X", ((s != NULL && !strcmp(s,"1")) ? CFG_KERN_ADDR: CFG_KERN2_ADDR));
+			}
+		}
+		/* Check image stable flag */
+		s = getenv("Image1Stable");
+		printf("Image stable Flag ... %s\n", !strcmp(s, "1") ? "Stable" : "Not stable");
+		int try = getenv("Image1Try");
+		printf("Image try counter ... %s\n", (try == NULL) ? "0" : try);
+		if ((strcmp(s, "1") != 0) && (simple_strtoul(try, NULL, 10)) > 3) {
+			printf("\nImage is not stable. Take it as a broken image.\n");
+			if (copy_image(strcmp(getenv("boot"), "1") ? 1 : 2)) {
+				printf("All images broken\n");
+				printf("System Enter Boot Command Line Interface.\n");
+				printf ("\n%s\n", version_string);
+				/* main_loop() can return to retry autoboot, if so just run it again. */
+				for (;;) {
+					main_loop ();
+				}
+			}
+		}
+		/* Boot from flash */
+		argv[1] = &addr_str[0];
+		printf("   \n3: System Boot system code via Flash.\n");
+		if (do_bootm(cmdtp, 0, 2, argv)) {
+			if (copy_image(strcmp(getenv("boot"), "1") ? 1 : 2)) {
+				printf("All images broken\n");
+				printf("System Enter Boot Command Line Interface.\n");
+				printf ("\n%s\n", version_string);
+				/* main_loop() can return to retry autoboot, if so just run it again. */
+				for (;;) {
+					main_loop ();
+				}
+			}
+		}
+		do_bootm(cmdtp, 0, 2, argv);
+
 #else
 		sprintf(addr_str, "0x%X", CFG_KERN_ADDR);
-#endif
 		argv[1] = &addr_str[0];
 		printf("   \n3: System Boot system code via Flash.\n");
 		do_bootm(cmdtp, 0, 2, argv);
+#endif
 	}
 	else {
 		char *argv[4];
@@ -2239,8 +2337,10 @@ __attribute__((nomips16)) void board_init_r (gd_t *id, ulong dest_addr)
 
 		case '2':
 			printf("   \n%d: System Load Linux Kernel then write to Flash via TFTP. \n", SEL_LOAD_LINUX_WRITE_FLASH);
-			printf(" Warning!! Erase Linux in Flash then burn new one. Are you sure?(Y/N)\n");
-			confirm = getc();
+			do  {
+				printf(" Warning!! Erase Linux in Flash then burn new one. Are you sure?(Y/N)\n");
+				confirm = getc();
+			} while (confirm != 'y' && confirm != 'Y' && confirm != 'n' && confirm != 'N' );
 			if (confirm != 'y' && confirm != 'Y') {
 				printf(" Operation terminated\n");
 				break;
@@ -2403,8 +2503,10 @@ __attribute__((nomips16)) void board_init_r (gd_t *id, ulong dest_addr)
 
 		case '9':
 			printf("   \n%d: System Load Boot Loader then write to Flash via TFTP. \n", SEL_LOAD_BOOT_WRITE_FLASH);
-			printf(" Warning!! Erase Boot Loader in Flash then burn new one. Are you sure?(Y/N)\n");
-			confirm = getc();
+			do  {
+				printf(" Warning!! Erase Boot Loader in Flash then burn new one. Are you sure?(Y/N)\n");
+				confirm = getc();
+			} while (confirm != 'y' && confirm != 'Y' && confirm != 'n' && confirm != 'N' );
 			if (confirm != 'y' && confirm != 'Y') {
 				printf(" Operation terminated\n");
 				break;

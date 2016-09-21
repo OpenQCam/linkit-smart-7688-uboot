@@ -41,8 +41,6 @@
 
 extern image_header_t header;           /* from cmd_bootm.c */
 
-extern int do_reset (cmd_tbl_t *cmdtp, int flag, int argc, char *argv[]);
-
 static int	linux_argc;
 static char **	linux_argv;
 
@@ -54,7 +52,7 @@ static void linux_params_init (ulong start, char * commandline);
 static void linux_env_set (char * env_name, char * env_val);
 
 
-void do_bootm_linux (cmd_tbl_t * cmdtp, int flag, int argc, char *argv[],
+int do_bootm_linux (cmd_tbl_t * cmdtp, int flag, int argc, char *argv[],
 		     ulong addr, ulong * len_ptr, int verify)
 {
 	DECLARE_GLOBAL_DATA_PTR;
@@ -86,7 +84,7 @@ void do_bootm_linux (cmd_tbl_t * cmdtp, int flag, int argc, char *argv[],
 		if (ntohl (hdr->ih_magic) != IH_MAGIC) {
 			printf ("Bad Magic Number\n");
 			SHOW_BOOT_PROGRESS (-10);
-			do_reset (cmdtp, flag, argc, argv);
+			return -1;
 		}
 
 		data = (ulong) & header;
@@ -98,7 +96,7 @@ void do_bootm_linux (cmd_tbl_t * cmdtp, int flag, int argc, char *argv[],
 		if (crc32 (0, (char *) data, len) != checksum) {
 			printf ("Bad Header Checksum\n");
 			SHOW_BOOT_PROGRESS (-11);
-			do_reset (cmdtp, flag, argc, argv);
+			return -1;
 		}
 
 		SHOW_BOOT_PROGRESS (10);
@@ -116,7 +114,7 @@ void do_bootm_linux (cmd_tbl_t * cmdtp, int flag, int argc, char *argv[],
 			if (csum != ntohl (hdr->ih_dcrc)) {
 				printf ("Bad Data CRC\n");
 				SHOW_BOOT_PROGRESS (-12);
-				do_reset (cmdtp, flag, argc, argv);
+				return -1;
 			}
 			printf ("OK\n");
 		}
@@ -128,7 +126,7 @@ void do_bootm_linux (cmd_tbl_t * cmdtp, int flag, int argc, char *argv[],
 		    (hdr->ih_type != IH_TYPE_RAMDISK)) {
 			printf ("No Linux MIPS Ramdisk Image\n");
 			SHOW_BOOT_PROGRESS (-13);
-			do_reset (cmdtp, flag, argc, argv);
+			return -1;
 		}
 
 		/*

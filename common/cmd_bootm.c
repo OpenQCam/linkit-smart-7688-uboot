@@ -119,7 +119,7 @@ image_header_t *fake_header(image_header_t *hdr, void *ptr, int size);
  *  - loaded (first part of) image to header load address,
  *  - disabled interrupts.
  */
-typedef void boot_os_Fcn (cmd_tbl_t *cmdtp, int flag,
+typedef int boot_os_Fcn (cmd_tbl_t *cmdtp, int flag,
 			  int	argc, char *argv[],
 			  ulong	addr,		/* of image to boot */
 			  ulong	*len_ptr,	/* multi-file image length table */
@@ -558,7 +558,7 @@ int do_bootm (cmd_tbl_t *cmdtp, int flag, int argc, char *argv[])
 #ifdef CONFIG_SILENT_CONSOLE
 	    fixup_silent_linux();
 #endif
-	    do_bootm_linux  (cmdtp, flag, argc, argv,
+	    return do_bootm_linux  (cmdtp, flag, argc, argv,
 			     addr, len_ptr, verify);
 	    break;
 
