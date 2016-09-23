@@ -33,12 +33,12 @@
 #if defined(MTK_NAND) 
 extern unsigned int  CFG_BLOCKSIZE;
 #else
-#include "../../../Uboot/drivers/ralink_nand.h"
+#include "../../drivers/ralink_nand.h"
 #endif
 #endif
 #endif
 
-#include "../../../Uboot/autoconf.h"
+#include "../../autoconf.h"
 //#define DEBUG				1
 //#define ET_DEBUG
 #define CONFIG_RT2880_ETH		1	/* Enable built-in 10/100 Ethernet */
@@ -112,7 +112,7 @@ extern unsigned int  CFG_BLOCKSIZE;
 #define CONFIG_BOOTCOMMAND	"tftp" //"run flash_self"
 
 
-#include "../../../Uboot/include/cmd_confdefs.h"
+#include "../../include/cmd_confdefs.h"
 
 /*
  * Miscellaneous configurable options
